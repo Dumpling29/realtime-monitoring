@@ -38,6 +38,6 @@ onValue(dhtRef, (snapshot) => {
 
 // Function to update the dashboard display
 function updateDashboard(humidity, temperature) {
-  document.getElementById("humidity").innerText = `Humidity: ${humidity}%`;
-  document.getElementById("temperature").innerText = `Temperature: ${temperature}°C`;
+    document.getElementById("humidity").innerText = "Humidity: 65%";
+    document.getElementById("temperature").innerText = "Temperature: 30°C";    
 }
