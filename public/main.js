@@ -29,6 +29,7 @@ const dhtRef = ref(db, 'DHT_11');
 // Listen for changes in DHT_11 data
 onValue(dhtRef, (snapshot) => {
   const data = snapshot.val();
+  console.log(data);
   if (data) {
     const humidity = data.Humidity;
     const temperature = data.Temperature;
@@ -38,6 +39,6 @@ onValue(dhtRef, (snapshot) => {
 
 // Function to update the dashboard display
 function updateDashboard(humidity, temperature) {
-    document.getElementById("humidity").innerText = "Humidity: 65%";
-    document.getElementById("temperature").innerText = "Temperature: 30°C";    
+  document.getElementById("humidity").innerText = `Humidity: ${humidity}%`;
+  document.getElementById("temperature").innerText = `Temperature: ${temperature}°C`;
 }
