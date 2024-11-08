@@ -2,14 +2,11 @@ console.log("main.js is loaded");
 
 
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getDatabase, ref, onValue } from "firebase/database";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDz3sxm8fzEh85rpndelnCfwlxYNDCwLHY",
   authDomain: "frass-composting.firebaseapp.com",
@@ -26,24 +23,30 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getDatabase(app);
 
+// Log to ensure Firebase is initialized correctly
 console.log("Firebase initialized", app);
 
-// Reference to the DHT_11 node
+// Reference to the DHT_11 node in Firebase Realtime Database
 const dhtRef = ref(db, 'DHT_11');
 
 // Listen for changes in DHT_11 data
 onValue(dhtRef, (snapshot) => {
   const data = snapshot.val();
-  console.log(data);
+  console.log(data); // Log the data to check if it's being fetched correctly
+
+  // Only update the dashboard if the data exists
   if (data) {
     const humidity = data.Humidity;
     const temperature = data.Temperature;
-    updateDashboard(humidity, temperature);  // Call function to display data on the dashboard
+    updateDashboard(humidity, temperature);  // Update the dashboard with the data
+  } else {
+    console.error("Data is not available or incorrectly structured.");
   }
 });
 
-// Function to update the dashboard display
+// Function to update the dashboard with the data
 function updateDashboard(humidity, temperature) {
   document.getElementById("humidity").innerText = `Humidity: ${humidity}%`;
   document.getElementById("temperature").innerText = `Temperature: ${temperature}°C`;
 }
+
