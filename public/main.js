@@ -23,6 +23,8 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getDatabase(app);
 
+console.log("Firebase initialized", app);
+
 // Reference to the DHT_11 node
 const dhtRef = ref(db, 'DHT_11');
 
