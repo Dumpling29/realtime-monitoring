@@ -1,12 +1,8 @@
-console.log("main.js is loaded");
-
-
-// Import the functions you need from the SDKs you need
+// Import Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-analytics.js";
 import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
-// Your web app's Firebase configuration
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDz3sxm8fzEh85rpndelnCfwlxYNDCwLHY",
   authDomain: "frass-composting.firebaseapp.com",
@@ -18,35 +14,89 @@ const firebaseConfig = {
   measurementId: "G-FCCKDY1NF9"
 };
 
-// Initialize Firebase
+// Initialize Firebase and database
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const db = getDatabase(app);
 
-// Log to ensure Firebase is initialized correctly
-console.log("Firebase initialized", app);
+// References to Chart.js instances for updating data in real-time
+let ds1Chart, ds2Chart;
 
-// Reference to the DHT_11 node in Firebase Realtime Database
-const dhtRef = ref(db, 'DHT_11');
+// Initialize the charts when the document is ready
+document.addEventListener("DOMContentLoaded", () => {
+  ds1Chart = createChart("ds1Chart", "DS1 Temperature Over Time");
+  ds2Chart = createChart("ds2Chart", "DS2 Temperature Over Time");
+});
 
-// Listen for changes in DHT_11 data
-onValue(dhtRef, (snapshot) => {
+// Function to create a line chart using Chart.js
+function createChart(canvasId, label) {
+  const ctx = document.getElementById(canvasId).getContext("2d");
+  return new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [], // Time labels
+      datasets: [
+        {
+          label: label,
+          data: [],
+          borderColor: "rgba(75, 192, 192, 1)",
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      scales: {
+        x: {
+          type: "time", // Use time scale for x-axis
+          time: {
+            unit: "minute",
+          },
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: "Temperature (°C)",
+          },
+        },
+      },
+    },
+  });
+}
+
+// Listen for changes in the 'sensor' node
+const sensorRef = ref(db, 'sensor');
+
+onValue(sensorRef, (snapshot) => {
   const data = snapshot.val();
-  console.log(data); // Log the data to check if it's being fetched correctly
-
-  // Only update the dashboard if the data exists
+  
   if (data) {
-    const humidity = data.Humidity;
-    const temperature = data.Temperature;
-    updateDashboard(humidity, temperature);  // Update the dashboard with the data
+    const ds1Data = [];
+    const ds2Data = [];
+    const timeLabels = [];
+
+    // Parse the data structure
+    for (const timestamp in data) {
+      const time = new Date(parseFloat(timestamp) * 1000); // Convert timestamp to Date object
+      const ds1Temp = data[timestamp].DS1;
+      const ds2Temp = data[timestamp].DS2;
+
+      // Populate arrays for Chart.js
+      timeLabels.push(time);
+      ds1Data.push(ds1Temp);
+      ds2Data.push(ds2Temp);
+    }
+
+    // Update the charts with new data
+    updateChart(ds1Chart, timeLabels, ds1Data);
+    updateChart(ds2Chart, timeLabels, ds2Data);
   } else {
     console.error("Data is not available or incorrectly structured.");
   }
 });
 
-// Function to update the dashboard with the data
-function updateDashboard(humidity, temperature) {
-  document.getElementById("humidity").innerText = `Humidity: ${humidity}%`;
-  document.getElementById("temperature").innerText = `Temperature: ${temperature}°C`;
+// Function to update Chart.js chart with new data
+function updateChart(chart, labels, data) {
+  chart.data.labels = labels;
+  chart.data.datasets[0].data = data;
+  chart.update();
 }
-
