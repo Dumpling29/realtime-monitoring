@@ -22,31 +22,30 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getDatabase(app);
 
-// Set up chart variables
-let ds1Chart, ds2Chart;
+// Set up chart variable
+let allSensorsChart;
 
-// Function to create charts with time-based x-axis
-function createChart(ctx, title) {
+// Function to create chart for all sensors
+function createChart(ctx) {
   return new Chart(ctx, {
     type: "line",
     data: {
-      labels: [], // Timestamps will go here
-      datasets: [
-        {
-          label: title,
-          data: [], // Temperature data will go here
-          borderColor: "rgba(75, 192, 192, 1)",
-          borderWidth: 2,
-          fill: false,
-        },
-      ],
+      labels: [], // Shared time axis for all sensors
+      datasets: [] // Dynamically populated for each sensor
     },
     options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top'
+        }
+      },
       scales: {
         x: {
           type: "time",
           time: {
-            unit: "minute"
+            parser: "yyyy-MM-dd'T'HH:mm:ssX", // Parse the new timestamp format
+            tooltipFormat: "PPpp", // Pretty print timestamps
           },
           title: {
             display: true,
@@ -65,19 +64,22 @@ function createChart(ctx, title) {
   });
 }
 
-// Initialize charts once the DOM is fully loaded
+// Initialize chart once the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", () => {
-  const ds1Ctx = document.getElementById("ds1Chart").getContext("2d");
-  const ds2Ctx = document.getElementById("ds2Chart").getContext("2d");
-
-  ds1Chart = createChart(ds1Ctx, "DS1 Temperature Over Time");
-  ds2Chart = createChart(ds2Ctx, "DS2 Temperature Over Time");
+  const allSensorsCtx = document.getElementById("allSensorsChart").getContext("2d");
+  allSensorsChart = createChart(allSensorsCtx);
 });
 
 // Update chart data dynamically
-function updateChart(chart, labels, data) {
-  chart.data.labels = labels;
-  chart.data.datasets[0].data = data;
+function updateChart(chart, labels, sensorData) {
+  chart.data.labels = labels; // Shared timestamps for all sensors
+  chart.data.datasets = Object.keys(sensorData).map((sensorId, index) => ({
+    label: sensorId, // Sensor ID as the label
+    data: sensorData[sensorId],
+    borderColor: `hsl(${(index * 360) / 20}, 70%, 50%)`, // Generate a unique color
+    borderWidth: 2,
+    fill: false
+  }));
   chart.update();
 }
 
@@ -89,18 +91,25 @@ onValue(sensorRef, (snapshot) => {
   console.log("Firebase Data:", data);
 
   if (data) {
-    const labels = [];
-    const ds1Data = [];
-    const ds2Data = [];
+    const labels = []; // Shared time axis
+    const sensorData = {}; // Store temperature data for all sensors
 
     Object.keys(data).forEach((timestamp) => {
-      labels.push(new Date(parseFloat(timestamp) * 1000)); // Convert to JS Date
-      ds1Data.push(data[timestamp].DS1);
-      ds2Data.push(data[timestamp].DS2);
+      const date = new Date(timestamp); // Parse ISO timestamp
+      labels.push(date);
+
+      Object.keys(data[timestamp]).forEach((sensorId) => {
+        if (!sensorData[sensorId]) {
+          sensorData[sensorId] = [];
+        }
+        sensorData[sensorId].push({
+          x: date, // Timestamp
+          y: data[timestamp][sensorId] // Sensor temperature
+        });
+      });
     });
 
-    updateChart(ds1Chart, labels, ds1Data);
-    updateChart(ds2Chart, labels, ds2Data);
+    updateChart(allSensorsChart, labels, sensorData);
   } else {
     console.error("Data is not available or incorrectly structured.");
   }
