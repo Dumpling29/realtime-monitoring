@@ -97,7 +97,7 @@ onValue(sensorRef, (snapshot) => {
     Object.keys(data).forEach((timestamp) => {
       const date = new Date(timestamp); // Parse ISO timestamp
       // Adjust for timezone (UTC+8 for KL)
-      date.setHours(date.getHours() + 8);
+      date.setHours(date.getHours() - 8);
 
       labels.push(date);
 
