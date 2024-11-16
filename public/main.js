@@ -56,7 +56,7 @@ function createChart(ctx) {
           beginAtZero: true,
           title: {
             display: true,
-            text: "Temperature (°C) (Test)"
+            text: "Temperature (°C)"
           }
         }
       }
