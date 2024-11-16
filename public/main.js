@@ -84,7 +84,7 @@ function updateChart(chart, labels, sensorData) {
 }
 
 // Fetch and update data from Firebase
-const sensorRef = ref(db, 'sensor');
+const sensorRef = ref(db, 'Sensor');
 
 onValue(sensorRef, (snapshot) => {
   const data = snapshot.val();
