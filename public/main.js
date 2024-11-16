@@ -37,15 +37,15 @@ function createChart(ctx) {
       responsive: true,
       plugins: {
         legend: {
-          position: 'top'
+          position: "top"
         }
       },
       scales: {
         x: {
           type: "time",
           time: {
-            parser: "yyyy-MM-dd'T'HH:mm:ssX", // Parse the new timestamp format
-            tooltipFormat: "PPpp", // Pretty print timestamps
+            parser: "yyyy-MM-dd'T'HH:mm:ssX", // Parse the ISO timestamp format
+            tooltipFormat: "PPpp" // Pretty print timestamps
           },
           title: {
             display: true,
@@ -56,7 +56,7 @@ function createChart(ctx) {
           beginAtZero: true,
           title: {
             display: true,
-            text: "Temperature (°C)"
+            text: "Temperature (°C) (Test)"
           }
         }
       }
@@ -84,7 +84,7 @@ function updateChart(chart, labels, sensorData) {
 }
 
 // Fetch and update data from Firebase
-const sensorRef = ref(db, 'Sensor');
+const sensorRef = ref(db, "Sensor");
 
 onValue(sensorRef, (snapshot) => {
   const data = snapshot.val();
@@ -98,17 +98,24 @@ onValue(sensorRef, (snapshot) => {
       const date = new Date(timestamp); // Parse ISO timestamp
       labels.push(date);
 
-      Object.keys(data[timestamp]).forEach((sensorId) => {
+      const sensors = data[timestamp]; // Sensor readings at this timestamp
+      Object.keys(sensors).forEach((sensorId) => {
         if (!sensorData[sensorId]) {
           sensorData[sensorId] = [];
         }
-        sensorData[sensorId].push({
-          x: date, // Timestamp
-          y: data[timestamp][sensorId] // Sensor temperature
-        });
+
+        // Only include valid readings (e.g., non-zero values)
+        if (sensors[sensorId] !== 0) {
+          sensorData[sensorId].push({
+            x: date, // Timestamp
+            y: sensors[sensorId] // Sensor temperature
+          });
+        }
       });
     });
 
+    // Sort labels (timestamps) and ensure all datasets align
+    labels.sort((a, b) => a - b);
     updateChart(allSensorsChart, labels, sensorData);
   } else {
     console.error("Data is not available or incorrectly structured.");
