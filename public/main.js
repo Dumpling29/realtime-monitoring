@@ -83,44 +83,94 @@ function updateChart(chart, labels, sensorData) {
   chart.update();
 }
 
+function downsampleData(data, interval) {
+  const aggregatedData = {};
+  const timestamps = Object.keys(data);
+
+  timestamps.forEach((timestamp) => {
+    const roundedTimestamp = Math.floor(new Date(timestamp).getTime() / interval) * interval;
+
+    Object.keys(data[timestamp]).forEach((sensorId) => {
+      if (!aggregatedData[roundedTimestamp]) {
+        aggregatedData[roundedTimestamp] = {};
+      }
+
+      if (!aggregatedData[roundedTimestamp][sensorId]) {
+        aggregatedData[roundedTimestamp][sensorId] = [];
+      }
+
+      aggregatedData[roundedTimestamp][sensorId].push(data[timestamp][sensorId]);
+    });
+  });
+
+  // Calculate averages
+  const averagedData = {};
+  Object.keys(aggregatedData).forEach((roundedTimestamp) => {
+    averagedData[roundedTimestamp] = {};
+
+    Object.keys(aggregatedData[roundedTimestamp]).forEach((sensorId) => {
+      const values = aggregatedData[roundedTimestamp][sensorId];
+      averagedData[roundedTimestamp][sensorId] =
+        values.reduce((sum, value) => sum + value, 0) / values.length;
+    });
+  });
+
+  return averagedData;
+}
+
 // Fetch and update data from Firebase
 const sensorRef = ref(db, "Sensor");
 
-onValue(sensorRef, (snapshot) => {
-  const data = snapshot.val();
-  console.log("Firebase Data:", data);
+const timePeriodSelector = document.getElementById("timePeriod");
 
-  if (data) {
-    const labels = []; // Shared time axis
-    const sensorData = {}; // Store temperature data for all sensors
-
-    Object.keys(data).forEach((timestamp) => {
-      const date = new Date(timestamp); // Parse ISO timestamp
-      // Adjust for timezone (UTC+8 for KL)
-      date.setHours(date.getHours() - 8);
-
-      labels.push(date);
-
-      const sensors = data[timestamp]; // Sensor readings at this timestamp
-      Object.keys(sensors).forEach((sensorId) => {
-        if (!sensorData[sensorId]) {
-          sensorData[sensorId] = [];
-        }
-
-        // Only include valid readings (e.g., non-zero values)
-        if (sensors[sensorId] !== 0) {
-          sensorData[sensorId].push({
-            x: date, // Timestamp
-            y: sensors[sensorId] // Sensor temperature
-          });
-        }
-      });
-    });
-
-    // Sort labels (timestamps) and ensure all datasets align
-    labels.sort((a, b) => a - b);
-    updateChart(allSensorsChart, labels, sensorData);
-  } else {
-    console.error("Data is not available or incorrectly structured.");
-  }
+timePeriodSelector.addEventListener("change", () => {
+  const selectedPeriod = timePeriodSelector.value;
+  adjustGraphForPeriod(selectedPeriod);
 });
+
+function adjustGraphForPeriod(period) {
+  let interval = 60 * 1000; // Default: 1 minute
+
+  if (period === "3d") {
+    interval = 60 * 60 * 1000; // 1 hour
+  } else if (period === "1w") {
+    interval = 6 * 60 * 60 * 1000; // 6 hours
+  }
+
+  onValue(sensorRef, (snapshot) => {
+    const data = snapshot.val();
+
+    if (data) {
+      const downsampledData = downsampleData(data, interval);
+      const labels = [];
+      const sensorData = {};
+
+      Object.keys(downsampledData).forEach((timestamp) => {
+        const date = new Date(parseInt(timestamp, 10));
+        labels.push(date);
+
+        const sensors = downsampledData[timestamp];
+        Object.keys(sensors).forEach((sensorId) => {
+          if (!sensorData[sensorId]) {
+            sensorData[sensorId] = [];
+          }
+          sensorData[sensorId].push({
+            x: date,
+            y: sensors[sensorId]
+          });
+        });
+      });
+
+      labels.sort((a, b) => a - b);
+      updateChart(allSensorsChart, labels, sensorData);
+    } else {
+      console.error("Data is not available or incorrectly structured.");
+    }
+  });
+}
+
+// Trigger initial data load for the default period
+adjustGraphForPeriod(timePeriodSelector.value);
+
+Chart.defaults.animation = false; // Disable animations for large datasets
+Chart.defaults.responsive = true; // Maintain responsiveness
